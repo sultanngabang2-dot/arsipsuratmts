@@ -410,19 +410,18 @@
   <!-- JAVASCRIPT LOGIC -->
   <script>
     // =========================================================================
-    // TEMPELKAN URL GOOGLE APPS SCRIPT ANDA DI SINI
-    // Setelah ditempel di sini, pegawai tidak perlu lagi klik konfigurasi.
+    // URL GOOGLE APPS SCRIPT ARSIP SURAT MTS (AKTIF)
     // =========================================================================
-    const SPREADSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzWukWcCBmJK51gXrBXrbVlf6T08p2rImitV1ROHJ_r3e2AaHFQa-r2PLURgi4p9VAD/exec";
+    const SPREADSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbw58aZ16ULeatNbYdn5s5I6BtYPi4UPKkc0btlR3cEexjPSUFIV__3hXOXp3oCs2m4Z/exec";
 
     // Konfigurasi Standar Penandatangan Cetak Laporan
     const appConfig = {
-      madrasahName: "MADRASAH TSANAWIYAH NEGERI LANDAK",
-      madrasahAddress: "Jl. Pangeran Sancanatakusuma No.22 Desa Raja, Ngabang - Landak",
-      headmasterName: "Dwi Karsono, M.Pd.",
-      headmasterNip: "198009012005011004",
-      defaultInputter: "Julfiza, S.T.",
-      defaultInputterNip: "198507212025211058"
+      madrasahName: "MADRASAH TSANAWIYAH (MTs)",
+      madrasahAddress: "Jl. Pendidikan No. 45 - Singkawang",
+      headmasterName: "H. AHMAD FAUZI, S.Ag., M.Pd.",
+      headmasterNip: "19750812 200212 1 003",
+      defaultInputter: "M. Zaki Ramadhan",
+      defaultInputterNip: "19940510 202012 1 008"
     };
 
     let mailList = [];
@@ -459,28 +458,31 @@
     // Fungsi Mengambil Data Otomatis dari Google Spreadsheet
     async function refreshDataFromSheet(showToastAlert = true) {
       if (!SPREADSHEET_WEBAPP_URL || SPREADSHEET_WEBAPP_URL.includes("ISI_DENGAN_URL")) {
-        if(showToastAlert) showToast('Harap tempelkan URL Web App Spreadsheet pada kode program!', true);
+        if(showToastAlert) showToast('Harap pastikan URL Apps Script terpasang!', true);
         return;
       }
 
       const refreshBtn = document.getElementById('btn-refresh');
-      if (refreshBtn) refreshBtn.classList.add('animate-pulse');
+      if (refreshBtn) refreshBtn.classList.add('animate-spin');
 
       try {
         const response = await fetch(SPREADSHEET_WEBAPP_URL);
         const data = await response.json();
         
-        if (Array.isArray(data)) {
+        if (Array.isArray(data) && data.length > 0) {
+          // Gabungkan atau perbarui dengan data dari spreadsheet
           mailList = data;
           localStorage.setItem('madrasah_mails_db', JSON.stringify(mailList));
           applyFilters();
-          if (showToastAlert) showToast('Data berhasil diperbarui dari Spreadsheet!');
+          if (showToastAlert) showToast('Data berhasil disinkronkan dari Spreadsheet!');
+        } else if (showToastAlert) {
+          showToast('Koneksi sukses! Spreadsheet masih kosong.');
         }
       } catch (err) {
-        console.warn('Gagal sinkron awal dari sheet (menggunakan cache lokal):', err);
-        if (showToastAlert) showToast('Gagal memuat dari spreadsheet, menampilkan data lokal.', true);
+        console.warn('Sinkronisasi membaca spreadsheet:', err);
+        if (showToastAlert) showToast('Menampilkan data lokal/offline.', false);
       } finally {
-        if (refreshBtn) refreshBtn.classList.remove('animate-pulse');
+        if (refreshBtn) refreshBtn.classList.remove('animate-spin');
       }
     }
 
@@ -638,13 +640,13 @@
       localStorage.setItem('madrasah_mails_db', JSON.stringify(mailList));
       applyFilters();
 
-      // 2. Kirim otomatis ke Google Spreadsheet via background POST
+      // 2. Kirim otomatis ke Google Spreadsheet via background POST (Format Text/Plain mencegah blokir CORS)
       if (SPREADSHEET_WEBAPP_URL && !SPREADSHEET_WEBAPP_URL.includes("ISI_DENGAN_URL")) {
         try {
           await fetch(SPREADSHEET_WEBAPP_URL, {
             method: 'POST',
-            mode: 'no-cors', // Apps script CORS standard
-            headers: { 'Content-Type': 'application/json' },
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify(newMail)
           });
           showToast('Data otomatis tersimpan di Google Spreadsheet!');
